@@ -1,81 +1,151 @@
-# kb_rag —— 面向个人学习知识库的 **Agentic RAG**（占位名，可改）
+# kb-rag
 
-> 全新项目，**独立于 （一个更早的项目）**。吸取 （一个更早的项目） 两个教训：
-> ①「根本不 agentic」→ 本项目核心是 LLM 驱动的自主回路，不是写死管线。
-> ②「定位/语料错」→ 只吃你自己的**学习知识库原始资料**（transcript + 书 PDF 文本），一个明确身份。
+A personal, **hallucination-resistant**, **cross-lingual** *agentic* RAG over your own study
+materials — English course transcripts, Chinese books (PDF → text), video subtitles. Retrieval is
+deterministic and local (essentially free); reasoning is done by an LLM only where it actually helps.
 
-## 这是什么
+It runs in two modes:
 
-一个**忠实的、agentic 的学习助手**，跑在你重抓+清洗的原始课程语料上，服务两个场景：
+- **Local & free** — use any Claude session as the reasoning agent on top of a pure-local retrieval
+  CLI. Retrieval is deterministic computation on your machine, so there is **no API cost** for
+  reasoning; the only (tiny) cost is embedding newly added chunks.
+- **Always-on WhatsApp** — an optional cloud service (FastAPI + Twilio) that answers from the same
+  knowledge base using a cheap model (OpenAI `gpt-4o-mini`), deployable to Railway.
 
-- **搜索**（`ask`）：对整个知识库准确问答，答案带原文引用、无支撑则拒答。
-- **教学**（`teach`）：整节原文**有序取回 + 覆盖核查**，喂给苏格拉底教学，**保证不漏细节**。
+---
 
-## 为什么 agentic（对症 （一个更早的项目） 教训①）
+## Why it exists
 
-分工照 BCA M08 黄金法则「能 workflow 就别 agent」：
+Three goals shaped every design decision:
+
+1. **No hallucination.** Answers may only use retrieved source text. Every claim maps to a real
+   retrieved chunk id, and a semantic **verify** gate (embedding cosine, not the model's word) blocks
+   any answer that isn't actually supported — otherwise it refuses. Cited ids must be ones that
+   retrieval really returned, so ids can't be fabricated.
+2. **Cross-domain / cross-lingual.** Ask in Chinese, get answers grounded in English sources (and vice
+   versa). Lexical search alone can't bridge languages, so retrieval is **hybrid** (lexical + vector).
+3. **Genuinely agentic.** Not a hard-wired pipeline: the loop plans, searches, judges whether the
+   evidence is sufficient, reformulates the query (including switching language), fetches full
+   sections, runs the anti-hallucination check, then answers or refuses.
+
+---
+
+## How retrieval works
 
 ```
-确定性 workflow（代码，engine.py）：分块 / 检索 / RRF / 引用 verify —— 稳、可审计
-Agentic 自主（LLM，agent.py）：① 规划 ② 迭代检索"够不够" ③ 综合 ④ 引用自查
+question
+  ├── BM25 / TF-IDF lexical  (CJK bigram tokenizer, no external segmenter)
+  └── vector embedding → cosine  (bge-m3 / e5 locally, or OpenAI / Voyage)
+                 │
+                 └── RRF fusion → (optional cross-encoder rerank) → top-k evidence
+                                              │
+                                              └── semantic verify gate (anti-hallucination)
 ```
 
-回路：
-```
-question → plan（拆子问题/选 search|teach/路由课程）
-        → retrieve-loop（调 search/fetch_section；judge 覆盖 → 不够就重写再搜 ↺）
-        → synthesize（基于检索块起草，逐句挂引用）
-        → self-check（verify 每条引用；无支撑 → 补搜或拒答）
-        → Answer{answer, citations, coverage, blocked}
-```
-「不 agentic」的病根就是缺 ②④——本项目的自主性正好放在这两处，其余全确定性。
+- **Hybrid + RRF.** Reciprocal-rank fusion of a lexical and a vector ranking. Cross-lingual recall
+  rides on the vector half (lexical coverage is 0 when the query and source share no words).
+- **Optional rerank.** A cross-encoder (`bge-reranker-base`) re-scores a larger candidate pool and is
+  the biggest lever for the hard "ask in Chinese about English content" cases.
+- **Verify gate.** The final answer is cosine-checked against the cited source chunks; below a floor
+  (`KB_RAG_SEM_FLOOR`, default 0.30) the answer is blocked. This is robust to paraphrase and to
+  cross-language answering.
+- **Page-accurate citations.** Books are sectioned by page window (`p.a-b`), so citations point to a
+  page range you can open and check.
 
-## 语料边界（对症 （一个更早的项目） 教训②）
+Pluggable embedders (`KB_RAG_EMBEDDER`): `local` (sentence-transformers, offline & free),
+`openai` (`text-embedding-3-small`, supports Matryoshka down-projection via `KB_RAG_OPENAI_DIM`),
+`voyage`, or `fake` (deterministic, for offline tests). **Query and corpus must use the same
+embedder/dimension** — changing it means re-embedding.
 
-- 只吃 `knowledge_base/raw/` 下**清洗过的原始资料**，打 `layer=raw`。
-- NotebookLM 拆解产物**不进这个池**（它走"产出内容 + 自己看"另一条路），保持 raw 池忠实纯度。
-- 每块带 `course / kind / section / order / layer` 元数据 → 支持按课/按节过滤与有序取回。
+---
 
-## 快速开始
+## Quick start
 
 ```bash
-# 1) 原始资料 → 语料（layer=raw）
-python -m kb_rag.ingest --src knowledge_base/raw --out chunks.jsonl
+# 1. Install (local, offline, free embeddings)
+pip install -e ".[vector,local]"          # or ".[vector]" to use OpenAI embeddings
 
-# 2) 问（搜索 agent，默认 mock 后端，纯 stdlib）
-python -m kb_rag.cli ask "temperature 怎么调"
+# 2. Ingest your materials into chunks (books auto-sectioned by page markers)
+python -m kb_rag.ingest --src /path/to/RAG-Database --out chunks.jsonl
 
-# 3) 教（教学 agent，整节有序取回 + 覆盖核查）
-python -m kb_rag.cli teach "监督学习" --course "Sample"
+# 3. Build the vector index (incremental — only new chunks are embedded)
+export KB_RAG_EMBEDDER=local               # or openai (needs OPENAI_API_KEY)
+python -m kb_rag.buildindex --chunks chunks.jsonl --out vectors.npz
 
-# 4) 真 LLM 后端（本地插 key 后）
-pip install anthropic
-export ANTHROPIC_API_KEY=sk-...
-python -m kb_rag.cli ask "..." --backend anthropic
+# 4. Retrieve — pure local, no LLM, no API cost
+python -m kb_rag.retrieve search "what is the anchoring effect" --k 8
+python -m kb_rag.retrieve outline "Thinking, Fast and Slow"
+python -m kb_rag.retrieve section "Thinking, Fast and Slow" "p.131-138"
+python -m kb_rag.retrieve verify "your drafted answer" <chunk_id> <chunk_id> ...
 ```
 
-## 后端：mock / 可插（照 （一个更早的项目） spec 保留的好做法）
+Data layout (bucket name sets the `kind`, subfolder name becomes the cited source title):
 
-- `MockBackend`：纯标准库、确定性，用启发式冒充 LLM 决策 → **离线即可测 agent 控制流**（本仓库测试就跑它）。
-- `AnthropicBackend`：本地插 `ANTHROPIC_API_KEY` 激活即用真 LLM。四个决策点各发一条结构化 prompt 给 Claude（官方 `anthropic` SDK）：`plan`/`judge`/`selfcheck` 用结构化输出（`output_config.format`，低 effort），`synthesize` 纯文本、只依据检索材料生成；系统提示词固定在前利于 prompt cache，`stop_reason: "refusal"` 与解析失败都有兜底不阻断回路。模型默认 `claude-sonnet-5`，可用 `--model` 或 `KB_RAG_MODEL` 覆盖。
+```
+RAG-Database/
+  book/<Title>/<Title>.txt          kind=book   (books sectioned by [p.N] page markers)
+  course/[series/]<Course>/*.txt    kind=course
+  video/<Course>/*.vtt|*.txt        kind=video
+```
 
-## 目录
+Use `kb-rag`'s own reasoning agent instead of the pure CLI:
+
+```bash
+python -m kb_rag.cli ask "how does human-in-the-loop approval work" --agentic --llm openai
+```
+
+---
+
+## The two modes
+
+| | Local (free) | Cloud WhatsApp |
+|---|---|---|
+| Runs on | your machine | Railway (24/7) |
+| Reasoning | any Claude session, via the `retrieve` CLI | OpenAI `gpt-4o-mini` |
+| Embeddings | local bge-m3 / e5 (offline) | OpenAI (no torch in the container) |
+| Cost | $0 API for reasoning | a fraction of a cent per question |
+
+The cloud path ships without `torch`, so it uses OpenAI query embeddings; the corpus vectors are
+down-projected and stored in float16 (`kb_rag/shrinkvecs.py`) to keep the image small. See
+[`docs/deploy-railway.md`](docs/deploy-railway.md) for the full Railway walkthrough, and
+[`docs/whatsapp-railway-journal.md`](docs/whatsapp-railway-journal.md) for a blow-by-blow of the
+pitfalls hit while deploying.
+
+---
+
+## Architecture & evaluation
+
+- [`docs/architecture.html`](docs/architecture.html) — visual system diagram (runtime path, retrieval
+  internals, data pipeline, the two backends).
+- [`docs/retrieval-scores.md`](docs/retrieval-scores.md) — a reproducible golden-set evaluation
+  (Recall@k / MRR by language and material type), tracked across changes.
+
+> Note: some in-repo docs and code comments are written in Chinese, reflecting the bilingual corpus
+> this was built for.
+
+---
+
+## Project layout
 
 ```
 kb_rag/
-├── engine.py   确定性检索核 + 工具（search/fetch_section/outline/list_courses/verify）
-├── ingest.py   原始资料(md/txt/vtt/srt) → chunks.jsonl（清洗字幕、分节、打元数据）
-├── agent.py    后端(Mock/Anthropic) + agentic 回路（search / teach 两模式）
-└── cli.py      命令行：ingest / ask / teach / courses
-tests/
-├── fixture/    最小样例语料（供 mock 冒烟）
-└── test_smoke.py
+  ingest.py      raw materials → chunks.jsonl (metadata; page-based book sectioning)
+  embed.py       pluggable embedders (local / openai / voyage / fake)
+  buildindex.py  incremental vector index (only embeds new chunks)
+  vecstore.py    content-addressed vector store (.npz)
+  engine.py      BM25 + TF-IDF lexical retrieval (CJK bigram)
+  hybrid.py      hybrid retrieval: lexical + vector, RRF fusion, optional rerank
+  rerank.py      cross-encoder reranker
+  retrieve.py    pure-local retrieval CLI (no LLM) — search / section / outline / verify
+  agent.py       reasoning agent (plan → retrieve → synthesize → self-check)
+  agentic.py     native tool-use loops (OpenAI / Anthropic)
+  server.py      WhatsApp (Twilio) frontend
+  shrinkvecs.py  down-project + float16 compress vectors for cloud deploy
+  eval.py        golden-set retrieval evaluation (Recall@k / MRR)
 ```
 
-## 现状 / 待办
+---
 
-- ✅ 确定性核 + agentic 回路（mock）端到端可跑；教学模式整节有序取回 + 覆盖核查。
-- ⏭ 落地 AnthropicBackend 四个 prompt；raw 语料接入（你本地抓+清洗）；PDF→txt 抽取脚本。
-- ⏭ 可选：索引持久化、增量加料、boundary 录制重放（要复现性再上，别过度工程）。
+## License
 
-> ⚠️ 语料是第三方课程原文 → **仅本地私用，别公开**。`chunks.jsonl` 等构建产物走 `.gitignore`。
+[MIT](LICENSE).
