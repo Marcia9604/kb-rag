@@ -1,0 +1,255 @@
+<title>Knowledge-RAG 架构</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#f5f7f9; --surface:#ffffff; --surface-2:#eceff4; --surface-3:#e3e8ef;
+    --ink:#13202b; --ink-soft:#516175; --ink-faint:#8494a6;
+    --line:#d3dae3; --line-strong:#b7c1cd;
+    --accent:#2c6f69;               /* 结构主色·深青 */
+    --local:#1c8a6e;                /* 本地·免费 */
+    --cloud:#bd6c15;                /* 云端·付费 */
+    --vector:#4a55c7;               /* 向量路径 */
+    --danger:#b23b48;
+    --shadow:0 1px 2px rgba(16,32,45,.05),0 6px 20px rgba(16,32,45,.06);
+  }
+  :root:not([data-theme="light"]){ }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1216; --surface:#161d25; --surface-2:#1c2530; --surface-3:#243040;
+      --ink:#e7eef4; --ink-soft:#9aabbd; --ink-faint:#6b7c8f;
+      --line:#28323d; --line-strong:#37444f;
+      --accent:#49b0a6; --local:#46c99b; --cloud:#e0a24a; --vector:#8a92ef; --danger:#e8737f;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1216; --surface:#161d25; --surface-2:#1c2530; --surface-3:#243040;
+    --ink:#e7eef4; --ink-soft:#9aabbd; --ink-faint:#6b7c8f;
+    --line:#28323d; --line-strong:#37444f;
+    --accent:#49b0a6; --local:#46c99b; --cloud:#e0a24a; --vector:#8a92ef; --danger:#e8737f;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+    line-height:1.6; letter-spacing:.1px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace}
+  .wrap{max-width:1000px; margin:0 auto; padding:clamp(1.5rem,4vw,3.5rem) clamp(1rem,4vw,2rem)}
+
+  header.top{margin-bottom:2.5rem}
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:.72rem; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--accent); font-weight:600; margin:0 0 .6rem}
+  h1{font-size:clamp(1.8rem,4.5vw,2.7rem); line-height:1.1; margin:0 0 .7rem; text-wrap:balance; font-weight:700; letter-spacing:-.01em}
+  .lede{font-size:1.05rem; color:var(--ink-soft); max-width:60ch; margin:0}
+  .status{display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.2rem}
+  .pill{display:inline-flex; align-items:center; gap:.4rem; font-size:.78rem; font-weight:600;
+    padding:.3rem .7rem; border-radius:999px; border:1px solid var(--line-strong); background:var(--surface)}
+  .pill .dot{width:.5rem;height:.5rem;border-radius:50%}
+  .dot.live{background:var(--local)} .dot.paid{background:var(--cloud)} .dot.free{background:var(--vector)}
+
+  section{margin:2.6rem 0}
+  .sec-head{display:flex; align-items:baseline; gap:.7rem; margin:0 0 1.1rem; padding-bottom:.5rem; border-bottom:1px solid var(--line)}
+  .sec-num{font-family:ui-monospace,Menlo,monospace; font-size:.9rem; font-weight:700; color:var(--accent)}
+  .sec-head h2{font-size:1.25rem; margin:0; font-weight:650; letter-spacing:-.01em}
+  .sec-note{font-size:.85rem; color:var(--ink-faint); margin-left:auto; text-align:right}
+
+  /* flow diagram */
+  .flow{display:flex; flex-direction:column; align-items:stretch; gap:0}
+  .node{background:var(--surface); border:1px solid var(--line-strong); border-radius:12px;
+    padding:.85rem 1.05rem; box-shadow:var(--shadow); position:relative}
+  .node .k{font-family:ui-monospace,Menlo,monospace; font-size:.74rem; letter-spacing:.03em; color:var(--ink-faint); display:block; margin-bottom:.15rem}
+  .node .t{font-weight:600; font-size:.98rem}
+  .node .d{font-size:.85rem; color:var(--ink-soft); margin-top:.25rem}
+  .node.accent{border-left:4px solid var(--accent)}
+  .node.local{border-left:4px solid var(--local)}
+  .node.cloud{border-left:4px solid var(--cloud)}
+  .node.vector{border-left:4px solid var(--vector)}
+  .node.phone{background:var(--surface-2); text-align:center}
+
+  .conn{align-self:center; width:2px; height:26px; background:linear-gradient(var(--line-strong),var(--line-strong)); position:relative; margin:0}
+  .conn::after{content:""; position:absolute; left:50%; bottom:-1px; transform:translateX(-50%);
+    border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid var(--line-strong)}
+  .conn .lbl{position:absolute; left:14px; top:50%; transform:translateY(-50%); white-space:nowrap;
+    font-family:ui-monospace,Menlo,monospace; font-size:.72rem; color:var(--ink-faint)}
+
+  /* cloud container box */
+  .cloudbox{border:1.5px dashed var(--cloud); border-radius:16px; padding:1.1rem; background:color-mix(in srgb,var(--cloud) 6%,var(--surface));
+    position:relative; display:flex; flex-direction:column; gap:0}
+  .cloudbox > .tag{position:absolute; top:-.7rem; left:1rem; background:var(--bg); padding:0 .5rem;
+    font-family:ui-monospace,Menlo,monospace; font-size:.74rem; font-weight:600; color:var(--cloud)}
+
+  /* split (two columns merging) */
+  .split{display:grid; grid-template-columns:1fr 1fr; gap:.8rem}
+  @media (max-width:560px){ .split{grid-template-columns:1fr} }
+
+  /* table */
+  .tablewrap{overflow-x:auto; border:1px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow)}
+  table{border-collapse:collapse; width:100%; min-width:520px; font-size:.9rem; background:var(--surface)}
+  th,td{text-align:left; padding:.7rem .9rem; border-bottom:1px solid var(--line)}
+  thead th{background:var(--surface-2); font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft)}
+  tbody tr:last-child td{border-bottom:none}
+  td .tag2{font-family:ui-monospace,Menlo,monospace; font-size:.8rem}
+  .badge{display:inline-block; font-size:.72rem; font-weight:700; padding:.12rem .5rem; border-radius:6px}
+  .badge.free{color:#fff; background:var(--local)} .badge.paid{color:#fff; background:var(--cloud)}
+
+  /* file list */
+  .files{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:.6rem}
+  .file{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:.6rem .8rem}
+  .file .fn{font-family:ui-monospace,Menlo,monospace; font-size:.82rem; font-weight:600; color:var(--accent)}
+  .file .fd{font-size:.8rem; color:var(--ink-soft); margin-top:.15rem}
+
+  .callout{border-left:4px solid var(--cloud); background:color-mix(in srgb,var(--cloud) 8%,var(--surface));
+    border-radius:0 10px 10px 0; padding:.9rem 1.1rem; font-size:.9rem; color:var(--ink)}
+  .callout b{color:var(--cloud)}
+
+  footer{margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--line); font-size:.82rem; color:var(--ink-faint)}
+  code{font-family:ui-monospace,Menlo,monospace; font-size:.85em; background:var(--surface-2); padding:.08em .4em; border-radius:5px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">System Architecture · 2026-08</p>
+    <h1>Knowledge-RAG 架构</h1>
+    <p class="lede">个人、防幻觉、跨领域的 agentic RAG。检索是本地确定性计算（几乎免费），推理按场景分两套后端。WhatsApp 前端已常驻云端。</p>
+    <div class="status">
+      <span class="pill"><span class="dot live"></span>WhatsApp 云端在线</span>
+      <span class="pill"><span class="dot free"></span>本地问答 · 0 API 费</span>
+      <span class="pill"><span class="dot paid"></span>云端 · gpt-4o-mini</span>
+      <span class="pill mono">~123k 块语料</span>
+    </div>
+  </header>
+
+  <!-- ① 线上问答链路 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>线上问答链路 · WhatsApp（云端常驻）</h2>
+      <span class="sec-note">关电脑也能答</span></div>
+    <div class="flow">
+      <div class="node phone"><span class="t">📱 你的手机</span></div>
+      <div class="conn"><span class="lbl">发消息</span></div>
+      <div class="node accent"><span class="k">Twilio WhatsApp</span><span class="t">沙箱号 +1 415 523 8886</span>
+        <span class="d">收到消息 → webhook POST 到云端</span></div>
+      <div class="conn"><span class="lbl">POST /whatsapp</span></div>
+
+      <div class="cloudbox">
+        <span class="tag">RAILWAY 云端容器 · 固定域名 · 24h</span>
+        <div class="flow">
+          <div class="node"><span class="k">server.py · FastAPI + uvicorn（监听 $PORT）</span>
+            <span class="t">立即回 200</span><span class="d">避免 Twilio 15s 超时；真正的活儿丢后台线程</span></div>
+          <div class="conn"><span class="lbl">后台线程</span></div>
+          <div class="node cloud"><span class="k">OpenAIToolAgent · gpt-4o-mini（你的 OpenAI key）</span>
+            <span class="t">agentic 回路</span>
+            <span class="d">plan → search → 判断够不够 → 换词/换语言再搜 → 取节 → verify 防幻觉 → 生成带出处答案</span></div>
+          <div class="conn"><span class="lbl">工具调用 → 本地检索（见 02）</span></div>
+          <div class="node"><span class="k">render</span><span class="t">渲染成 WhatsApp 文本</span>
+            <span class="d">≤1500 字符分段；附《来源》列表</span></div>
+        </div>
+      </div>
+      <div class="conn"><span class="lbl">Twilio REST 主动回发</span></div>
+      <div class="node phone"><span class="t">📱 手机收到「答案 + 《来源》」</span></div>
+    </div>
+  </section>
+
+  <!-- ② 检索内部 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>检索内部 · 混检（本地确定性计算）</h2>
+      <span class="sec-note">几乎不花钱</span></div>
+    <div class="flow">
+      <div class="node accent" style="text-align:center"><span class="t">问题</span></div>
+      <div class="conn"></div>
+      <div class="split">
+        <div class="node"><span class="k">engine.py</span><span class="t">BM25 / TFIDF 词法</span>
+          <span class="d">CJK bigram，无 jieba</span></div>
+        <div class="node vector"><span class="k">text-embedding-3-small · 256 维</span><span class="t">向量语义 · 余弦</span>
+          <span class="d">对 vectors-openai-384.npz（256 维 float16）</span></div>
+      </div>
+      <div class="conn"><span class="lbl">RRF 融合</span></div>
+      <div class="node"><span class="k">hybrid.py</span><span class="t">RRF 融合 →（可选 rerank）→ top-k 证据块</span>
+        <span class="d">跨语言召回靠向量那一半；rerank 精排为可选杠杆</span></div>
+      <div class="conn"><span class="lbl">交答案前</span></div>
+      <div class="node accent"><span class="k">retrieve.py verify</span><span class="t">语义核对 · 防幻觉硬护栏</span>
+        <span class="d">块 id 必须真实 + 语义支撑达标，否则拒答，绝不编</span></div>
+    </div>
+  </section>
+
+  <!-- ③ 数据管线 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>数据 / 构建管线（离线 · 一次建库 + 增量）</h2></div>
+    <div class="flow">
+      <div class="node"><span class="k">~/RAG-Database（book / course / video）</span>
+        <span class="t">原始语料 · GitHub RAG-Database 的克隆</span></div>
+      <div class="conn"><span class="lbl">ingest.py · 分块+分节（书按 [p.N] 分页）</span></div>
+      <div class="node"><span class="k mono">chunks.jsonl</span><span class="t">带元数据的语料块 · ~123k</span></div>
+      <div class="conn"><span class="lbl">buildindex（增量·只嵌新增块）</span></div>
+      <div class="split">
+        <div class="node local"><span class="k">--embedder local · bge-m3/e5</span><span class="t">vectors.npz</span>
+          <span class="d">本地免费、离线 → 给「本地 Claude Code 问答」用</span></div>
+        <div class="node cloud"><span class="k">--embedder openai · 1536 维</span><span class="t">vectors-openai.npz</span>
+          <span class="d">一次性 ~$1</span></div>
+      </div>
+      <div class="conn"><span class="lbl">shrinkvecs --dim 256（Matryoshka 截断 + float16）</span></div>
+      <div class="node cloud"><span class="k mono">vectors-openai-384.npz · ~69MB</span>
+        <span class="t">压缩向量 · 好过 railway up 上传上限</span></div>
+      <div class="conn"><span class="lbl">railway up（连同 chunks.jsonl）</span></div>
+      <div class="node accent"><span class="t">烤进云端 Docker 镜像 → 部署</span></div>
+    </div>
+  </section>
+
+  <!-- 两个角色 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>两个角色，两套后端（关键区分）</h2></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>场景</th><th>在哪跑</th><th>谁推理</th><th>向量</th><th>花钱</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>A · 你在 VS Code 问知识</b><br><span style="color:var(--ink-faint);font-size:.82rem">本地 session</span></td>
+            <td>你的 Mac</td>
+            <td>我（Claude 订阅）</td>
+            <td class="tag2">vectors.npz<br><span style="color:var(--ink-faint)">e5/bge · 本地</span></td>
+            <td><span class="badge free">0 API 费</span></td>
+          </tr>
+          <tr>
+            <td><b>B · WhatsApp 自动问答</b><br><span style="color:var(--ink-faint);font-size:.82rem">云端服务</span></td>
+            <td>Railway</td>
+            <td>gpt-4o-mini</td>
+            <td class="tag2">vectors-openai-384.npz<br><span style="color:var(--ink-faint)">OpenAI 256 维</span></td>
+            <td><span class="badge paid">每问几厘</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.88rem;color:var(--ink-soft);margin-top:.9rem">
+      为什么两套向量：云端不装 torch（省内存、防 OOM），只能用 OpenAI 算查询向量；本地免费用 e5。
+      两份并存、互不干扰——编辑器里问是免费的，WhatsApp 那条给「人不在也能自动答」用。</p>
+  </section>
+
+  <!-- 关键文件 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>关键文件</h2></div>
+    <div class="files">
+      <div class="file"><div class="fn">server.py</div><div class="fd">WhatsApp 接入：webhook → 后台 agent → 回发</div></div>
+      <div class="file"><div class="fn">agentic.py</div><div class="fd">OpenAIToolAgent · 原生工具回路</div></div>
+      <div class="file"><div class="fn">hybrid.py</div><div class="fd">BM25 + 向量，RRF 融合，可选 rerank</div></div>
+      <div class="file"><div class="fn">retrieve.py</div><div class="fd">纯本地检索 CLI + verify 防幻觉</div></div>
+      <div class="file"><div class="fn">embed.py</div><div class="fd">可插拔 embedder；OpenAI 支持降维</div></div>
+      <div class="file"><div class="fn">shrinkvecs.py</div><div class="fd">向量降维 + float16 压缩上云</div></div>
+      <div class="file"><div class="fn">ingest.py</div><div class="fd">原始资料 → chunks.jsonl（分节/分页）</div></div>
+      <div class="file"><div class="fn">Dockerfile / railway.json</div><div class="fd">云端镜像 + 部署配置</div></div>
+    </div>
+  </section>
+
+  <div class="callout">
+    <b>部署纪律：</b>云端更新只走 <code>railway up</code>（带 Dockerfile + 数据），已断开 GitHub 自动部署——
+    <code>main</code> 里没有语料/向量（gitignore 或太大），若让 GitHub 从 main 自动构建会找不到数据而失败。
+  </div>
+
+  <footer>
+    详见 <span class="mono">docs/deploy-railway.md</span>（操作手册）与 <span class="mono">docs/whatsapp-railway-journal.md</span>（踩坑纪实）。
+    检索打分见 <span class="mono">docs/retrieval-scores.md</span>。
+  </footer>
+</div>

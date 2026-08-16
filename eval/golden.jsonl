@@ -1,0 +1,39 @@
+{"q": "什么是锚定效应？", "lang": "zh", "expect": {"kind": "book", "section_contains": "锚定"}}
+{"q": "前景理论讲的是什么？", "lang": "zh", "expect": {"kind": "book", "section_contains": "前景理论"}}
+{"q": "禀赋效应是什么？", "lang": "zh", "expect": {"kind": "book", "section_contains": "禀赋效应"}}
+{"q": "什么是框架效应？", "lang": "zh", "expect": {"kind": "book", "section_contains": "框架效应"}}
+{"q": "为什么说所有表现都会回归平均值？", "lang": "zh", "expect": {"kind": "book", "section_contains": "回归平均"}}
+{"q": "系统1和系统2有什么区别？", "lang": "zh", "expect": {"kind": "book", "course": "思考"}}
+{"q": "怎么给 agent 工作流加人工审批？", "lang": "zh", "expect": {"kind": "course", "course": "Building AI Research Agents", "section_contains": "Human-in-the-Loop"}}
+{"q": "How does human-in-the-loop approval work in an agent workflow?", "lang": "en", "expect": {"kind": "course", "course": "Building AI Research Agents", "section_contains": "Human-in-the-Loop"}}
+{"q": "What is a multi-agent system and when to use one?", "lang": "en", "expect": [{"kind": "course", "course": "Designing Multi-Agent Systems"}, {"kind": "book", "course": "Agentic-Design-Patterns"}]}
+{"q": "How do you deploy an AI agent to production?", "lang": "en", "expect": {"kind": "course", "course": "Deploying AI Agents"}}
+{"q": "What is the prompt chaining pattern in agentic design?", "lang": "en", "expect": {"kind": "book", "course": "Agentic-Design-Patterns"}}
+{"q": "What is the reflection pattern for agents?", "lang": "en", "expect": {"kind": "book", "course": "Agentic-Design-Patterns"}}
+{"q": "金字塔原理的核心思想是什么？", "lang": "zh", "expect": {"kind": "book", "course": "金字塔原理"}}
+{"q": "What is the core idea of Atomic Habits?", "lang": "en", "expect": {"kind": "book", "course": "Atomic Habits"}}
+{"q": "纳瓦尔关于财富和幸福的核心观点是什么？", "lang": "zh", "expect": {"kind": "book", "course": "纳瓦尔"}}
+{"q": "什么是 RAG，为什么研究助手需要它？", "lang": "zh", "expect": {"kind": "course", "course": "Building AI Research Agents"}}
+{"q": "What is the Perception-Reasoning-Action model for AI agents?", "lang": "en", "expect": {"kind": "course", "course": "AI Agent Architecture"}}
+{"q": "CrewAI 框架里 Planner、Executor、Reviewer 分别是什么角色？", "lang": "zh", "expect": {"kind": "course", "course": "Designing Multi-Agent Systems"}}
+{"q": "How do LLM APIs integrate with LangGraph for deploying agents?", "lang": "en", "expect": {"kind": "course", "course": "Deploying AI Agents"}}
+{"q": "agentic RAG 怎么决定该搜网页还是搜文档？", "lang": "zh", "expect": {"kind": "course", "course": "Building AI Research Agents"}}
+{"q": "富爸爸穷爸爸这本书的核心理财观点是什么？", "lang": "zh", "expect": {"kind": "book", "course": "富爸爸穷爸爸"}}
+{"q": "怎么样才算是批判性思维？学会提问这本书怎么说？", "lang": "zh", "expect": {"kind": "book", "course": "学会提问"}}
+{"q": "人性的弱点这本书讲了哪些为人处世的原则？", "lang": "zh", "expect": {"kind": "book", "course": "人性的弱点"}}
+{"q": "小狗钱钱这本书讲了什么理财道理？", "lang": "zh", "expect": {"kind": "book", "course": "小狗钱钱"}}
+{"q": "What are guardrails/safety patterns for AI agents?", "lang": "en", "expect": {"kind": "book", "course": "Agentic-Design-Patterns", "section_contains": "Guardrails"}}
+{"q": "什么是红队测试（red teaming），怎么用在 AI agent 安全上？", "lang": "zh", "expect": [{"kind": "video", "course": "AI Engineer"}, {"kind": "book", "course": "Agentic-Design-Patterns"}]}
+{"q": "怎么把 AI agent 部署到生产环境？", "lang": "zh", "expect": {"kind": "course", "course": "Deploying AI Agents"}}
+{"q": "多智能体系统里怎么做角色分配和任务分工？", "lang": "zh", "expect": [{"kind": "course", "course": "Designing Multi-Agent Systems"}, {"kind": "book", "course": "Agentic-Design-Patterns"}]}
+{"q": "What is CrewAI used for in multi-agent systems?", "lang": "en", "expect": {"kind": "course", "course": "Designing Multi-Agent Systems"}}
+{"q": "金字塔原理里怎么用标题结构表达思路？", "lang": "zh", "expect": {"kind": "book", "course": "金字塔原理"}}
+{"q": "What is the NIST AI risk management framework maturity model?", "lang": "en", "expect": {"kind": "video", "course": "AI Engineer"}}
+{"q": "EU AI Act 对高风险 AI agent 的人类监督有什么要求？", "lang": "zh", "expect": {"kind": "video", "course": "AI Engineer"}}
+{"q": "What did the longest study on human happiness find?", "lang": "en", "expect": {"kind": "video", "course": "The Diary Of A CEO"}}
+{"q": "Diary of a CEO 那期讨论 AI agent 会取代哪些工作的内容是什么？", "lang": "zh", "expect": {"kind": "video", "course": "The Diary Of A CEO"}}
+{"q": "Mel Robbins 播客里讲了什么改变习惯或心态的建议？", "lang": "zh", "expect": {"kind": "video", "course": "Mel Robbins"}}
+{"q": "What is the genesis of the capitalist according to Marx's Capital?", "lang": "en", "expect": {"kind": "book", "course": "资本论"}}
+{"q": "什么是主要矛盾和次要矛盾？矛盾论怎么说的？", "lang": "zh", "expect": {"kind": "book", "course": "毛泽东选集"}}
+{"q": "What is the Cognitive Revolution in Sapiens?", "lang": "en", "expect": {"kind": "book", "course": "Sapiens"}}
+{"q": "What is Dataism according to Homo Deus?", "lang": "en", "expect": {"kind": "book", "course": "Homo Deus"}}

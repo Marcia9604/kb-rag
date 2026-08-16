@@ -1,0 +1,19 @@
+# .dockerignore — 精简 Docker 构建上下文（Dockerfile 只显式 COPY 需要的文件，这里再兜一层）。
+.git
+.github
+__pycache__
+*.pyc
+.venv
+venv
+.env
+*.env
+vectors.npz
+vectors.npy
+vectors-openai.npz
+RAG-Database
+RAG-Databasebackup
+eval
+tests
+docs
+*.old
+.DS_Store

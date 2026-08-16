@@ -1,0 +1,26 @@
+# .railwayignore — 控制 `railway up` 上传哪些文件。
+# ⚠️ 实测 Railway 会**并用 .gitignore + .railwayignore**，所以 .gitignore 里的 chunks.jsonl
+#    会被挡掉。用下面的**取反** `!chunks.jsonl` 把它重新放行（gitignore 语义：后到的规则胜出）。
+!chunks.jsonl
+.git
+.github
+__pycache__
+*.pyc
+.venv
+venv
+.env
+*.env
+# 本地 e5 向量库 + OpenAI 全维库（727MB，太大传不上）——云端只用压缩版 vectors-openai-384.npz
+vectors.npz
+vectors.npy
+vectors-openai.npz
+# 私有原始语料仓库、评测、文档、脚本产物——云端跑不到，别上传
+RAG-Database
+RAG-Databasebackup
+eval
+tests
+docs
+scratchpad
+*.old
+.DS_Store
+# 注意：chunks.jsonl 靠顶部 `!chunks.jsonl` 放行；vectors-openai-384.npz 未被忽略，直接上传。

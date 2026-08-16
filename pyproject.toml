@@ -1,0 +1,28 @@
+[project]
+name = "kb-rag"
+version = "0.1.0"
+description = "面向个人学习知识库的 agentic RAG（独立于 （一个更早的项目），占位名可改）"
+requires-python = ">=3.10"
+dependencies = []                      # 核心 + mock 后端纯标准库
+
+[project.optional-dependencies]
+llm = ["anthropic>=0.40"]              # 真 LLM 后端才需要
+whatsapp = ["fastapi>=0.110", "uvicorn>=0.29", "twilio>=9", "python-multipart>=0.0.9"]  # WhatsApp 接入（python-multipart：Twilio 表单必需，缺它 /whatsapp 会 422/500）
+vector = ["numpy>=1.26", "openai>=1.40"]  # 混合检索(向量语义)；Voyage 用 voyageai
+voyage = ["numpy>=1.26", "voyageai>=0.2"]  # 用 Voyage embedding 时
+local = ["numpy>=1.26", "sentence-transformers>=3.0"]  # 本地嵌入(bge-m3)，零 API、离线
+pdf = ["pymupdf>=1.24"]                # PDF→txt 抽取（可选）
+youtube = ["yt-dlp>=2024.1"]           # 抓 YouTube 字幕入库
+dev = ["pytest>=8"]
+
+[project.scripts]
+kb-rag = "kb_rag.cli:main"
+
+# 只打包 kb_rag；根目录的 eval/（黄金集数据）、tests/ 等不是包，需显式排除，
+# 否则 setuptools 扁平布局自动发现会因"多个顶层目录"而拒绝构建。
+[tool.setuptools]
+packages = ["kb_rag"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

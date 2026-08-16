@@ -1,0 +1,100 @@
+<title>Agentic 回路</title>
+<style>
+  :root{
+    --bg:#f7f9fb; --panel:#ffffff; --ink:#141a22; --muted:#5b6672;
+    --line:#dde4ec; --accent:#2563eb;
+    --search:#e7eefe; --search-b:#2563eb;
+    --gate:#fdf1e3; --gate-b:#d97706;
+    --answer:#e9f9ef; --answer-b:#16a34a;
+    --refuse:#fdeaea; --refuse-b:#dc2626;
+    --diagram-bg:#fbfcfe;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d131b; --panel:#141c26; --ink:#e8edf3; --muted:#93a0af;
+      --line:#243040; --accent:#5b9bff; --diagram-bg:#f4f7fb;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d131b; --panel:#141c26; --ink:#e8edf3; --muted:#93a0af;
+    --line:#243040; --accent:#5b9bff; --diagram-bg:#f4f7fb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:44px 22px 70px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+  h1{font-size:28px;line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 28px;font-size:15px;max-width:64ch}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:26px}
+  .diagram{background:var(--diagram-bg);border-radius:9px;overflow-x:auto;padding:18px 10px}
+  .mermaid{min-width:560px;display:flex;justify-content:center}
+  .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:28px}
+  .chip{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--panel)}
+  .chip h3{margin:0 0 3px;font-size:14px;display:flex;align-items:center}
+  .chip .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px}
+  .chip p{margin:0;font-size:13px;color:var(--muted)}
+  .d-search{background:var(--search-b)} .d-gate{background:var(--gate-b)} .d-answer{background:var(--answer-b)} .d-refuse{background:var(--refuse-b)}
+  .why{border-top:1px solid var(--line);padding-top:22px}
+  .why h2{font-size:13px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:0 0 14px}
+  .why ul{margin:0;padding:0;list-style:none;display:grid;gap:11px}
+  .why li{padding-left:20px;position:relative;font-size:14px}
+  .why li::before{content:"›";position:absolute;left:2px;color:var(--accent);font-weight:700}
+  .why b{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--accent)}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Knowledge-RAG · 我自己的 agentic 逻辑</p>
+  <h1>Agentic 回路</h1>
+  <p class="sub">不是"检索一次就塞给 LLM"，而是一个带判断的回路：搜 → 判断够不够 → 不够就多轮改写重搜 → 取细节 → 跨来源综合 → 出答案前硬核对，不过就回去重搜或拒答。</p>
+
+  <div class="card">
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+    Q([问题]) --> PLAN[拆题 · 规划要搜哪些来源]
+    PLAN --> SEARCH[search 混检<br/>BM25 + 向量 + rerank]
+    SEARCH --> JUDGE{命中够不够 / 对不对?}
+    JUDGE -->|不够 / 不对| REFINE[改写查询<br/>--course / --kind 缩范围]
+    REFINE --> SEARCH
+    JUDGE -->|够了| DETAIL{要整节上下文?}
+    DETAIL -->|是| SECTION[section 取回整节]
+    DETAIL -->|否| DRAFT[起草答案<br/>只用检索到的原文]
+    SECTION --> DRAFT
+    DRAFT --> VERIFY[verify 护栏<br/>真实引用 + 语义支撑 ≥ 地板]
+    VERIFY --> GATE{通过?}
+    GATE -->|BLOCK / 支撑不足| REFINE
+    GATE -->|SUPPORTED| ANSWER([作答 · 引用块id + 页码])
+    JUDGE -.->|库里确实没有| REFUSE([拒答: 知识库无依据])
+    GATE -.->|反复不过| REFUSE
+
+    class SEARCH,PLAN,SECTION,REFINE search
+    class JUDGE,DETAIL,VERIFY,GATE gate
+    class ANSWER answer
+    class REFUSE refuse
+    classDef search fill:#dbeafe,stroke:#2563eb,color:#1e3a8a,stroke-width:1.5px;
+    classDef gate fill:#ffedd5,stroke:#d97706,color:#7c2d12,stroke-width:1.5px;
+    classDef answer fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:1.5px;
+    classDef refuse fill:#fee2e2,stroke:#dc2626,color:#7f1d1d,stroke-width:1.5px;
+</pre>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="chip"><h3><span class="dot d-search"></span>检索 / 取节</h3><p>search（BM25+向量+rerank）找证据，不够就改写重搜、缩范围；要细节用 section 取整节。都是本地确定性计算，≈免费。</p></div>
+    <div class="chip"><h3><span class="dot d-gate"></span>判断 / 护栏</h3><p>判断命中够不够；出答案前 verify 硬核对——引用必须真实、语义支撑≥地板。这是"禁止幻觉"的硬保证。</p></div>
+    <div class="chip"><h3><span class="dot d-answer"></span>作答</h3><p>只用检索到的原文，引用块 id + 页码，可回原书核对。</p></div>
+    <div class="chip"><h3><span class="dot d-refuse"></span>拒答</h3><p>库里没有、或反复核对不过 → 明说"知识库里没有"，宁拒答不编造。</p></div>
+  </div>
+
+  <div class="why">
+    <h2>三个「自己的」设计</h2>
+    <ul>
+      <li><b>纪律写死在 CLAUDE.md</b>只引原文、必须核对、宁拒答不编造——是你的规则，不是通用 RAG。</li>
+      <li><b>veto 是确定性代码</b>verify 用 embedding 算支撑分、一票否决，不靠模型自觉。</li>
+      <li><b>能 workflow 就不 agent</b>确定性检索交本地代码（便宜），只在推理/改写/综合/判断处动用 LLM 自主性。</li>
+      <li><b>多轮兜底</b>单发检索会漏的题（如跨语言 HITL），多轮改写 + 跨来源综合能答对——这就是 agentic 比简单引索强的地方。</li>
+    </ul>
+  </div>
+</div>

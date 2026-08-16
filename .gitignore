@@ -1,0 +1,15 @@
+# 密钥——绝不入库（key 走环境变量，别写进代码/仓库）
+.env
+*.env
+.envrc
+secrets*.json
+# 构建产物 & 私有语料——可再生、仅本地私用，不入库
+chunks.jsonl
+*.pkl
+*.npy
+vectors.npy
+index/
+knowledge_base/
+__pycache__/
+*.pyc
+.venv/
